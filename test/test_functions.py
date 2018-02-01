@@ -70,7 +70,7 @@ class FunctionsTest(unittest.TestCase):
     def test_cigar(self):
         """testing cigar correction function"""
         cigar = [[0, 14], [1, 1], [0, 5]]
-        from mirtop.mirna.realign import cigar_correction, make_cigar
+        from mirtop.mirna.realign import cigar_correction, make_cigar, cigar2snp, expand_cigar
         fixed = cigar_correction(cigar, "AAAAGCTGGGTTGAGGAGGA", "AAAAGCTGGGTTGAGAGGA")
         if not fixed[0] == "AAAAGCTGGGTTGAGGAGGA":
             raise ValueError("Sequence 1 is not right.")
@@ -78,6 +78,12 @@ class FunctionsTest(unittest.TestCase):
             raise ValueError("Sequence 2 is not right.")
         if not make_cigar("AAA-AAATAAA", "AGACAAA-AAA") == "MAMD3MI3M":
             raise ValueError("Cigar not eq to MAMD3MI3M: %s" % make_cigar("AAA-AAATAAA", "AGACAAA-AAA"))
+        # test expand cigar
+        if not expand_cigar("3MA3M") == "MMMAMMM":
+            raise ValueError("Cigar 3MA3M not eqaul to MMMAMMM but to %s" % expand_cigar("3MA3M"))
+        # test cigar to snp
+        if not cigar2snp("3MA3M", "AAATCCC")[0] == [3, "A", "T"]:
+            raise ValueError("3MA3M not equal AAATCCC but %s" % cigar2snp("3MA3M", "AAATCCC"))
 
     @attr(locala=True)
     def test_locala(self):
@@ -261,7 +267,6 @@ class FunctionsTest(unittest.TestCase):
         print gff
         return True
 
-
     @attr(counts=True)
     def test_counts(self):
         """testing convert_gff_counts in convert.py function"""
@@ -272,18 +277,20 @@ class FunctionsTest(unittest.TestCase):
 
         logger.initialize_logger("test counts", True, True)
         logger = logger.getLogger(__name__)
-     
+
         counts_params = ['--gff', 'data/examples/gff/2samples.gff', '--out', 'data/examples/gff/']
-        
 
         parser = argparse.ArgumentParser()
         parser.add_argument("--gff")
         parser.add_argument("--out")
 
         args = parser.parse_args(counts_params)
-        
         convert_gff_counts(args)
-        
+
         return True
 
-
+    @attr(stats=True)
+    def test_stats(self):
+        """testing stats function"""
+        from mirtop.gff import stats
+        print stats._calc_stats("data/examples/gff/correct_file.gff")

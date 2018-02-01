@@ -155,10 +155,9 @@ def align(x, y):
     aligned_x = list(aligned_x)
     n_x = aligned_x[0]
     if "N" in n_x:
-        N_indices =  [i for i, ltr in enumerate(n_x) if ltr == 'N']
+        N_indices = [i for i, ltr in enumerate(n_x) if ltr == 'N']
         n_x = list(n_x)
         for N_index in N_indices:
-            #print N_index, n_x[N_index],y[N_index]
             n_x[N_index] = y[N_index]
         n_x = ''.join(n_x)
 
@@ -226,6 +225,47 @@ def cigar_correction(cigarLine, query, target):
             query_fixed.append("".join(["-"] * cigarLength))
             target_pos = target_pos + cigarLength
     return ["".join(query_fixed), "".join(target_fixed)]
+
+def expand_cigar(cigar):
+    """
+    From short CIGAR version to long CIGAR version
+    where each character is each nts in the sequence
+    """
+    cigar_long = ""
+    n = 0
+    for nt in cigar:
+        if nt in ["D", "M", "I", "A", "T", "C", "G"]:
+            cigar_long += nt * n
+            n = 1
+        else:
+            n = int(nt)
+    return cigar_long
+
+def cigar2snp(cigar, reference):
+    """
+    From a CIGAR string and reference sequence
+    return position of mismatches (indels included) as
+      [pos, seq_nt, ref_nt]
+    """
+    snp = []
+    pos_seq = 0
+    pos_ref = 0
+    for nt in expand_cigar(cigar):
+        if nt != "M":
+            if nt == "I":
+                snp.append([pos_seq, nt, "-"])
+                pos_seq += 1
+            elif nt == "D":
+                snp.append([pos_seq, "-", reference[pos_ref]])
+                pos_ref += 1
+            else:
+                snp.append([pos_seq, nt, reference[pos_ref]])
+                pos_ref += 1
+                pos_seq += 1
+        else:
+            pos_ref += 1
+            pos_seq += 1
+    return snp
 
 def reverse_complement(seq):
     return Seq(seq).reverse_complement()
